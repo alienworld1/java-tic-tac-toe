@@ -1,0 +1,22 @@
+.root {
+    -fx-background: rgb(51, 51, 51);
+}
+
+.button:disabled, .button:disabled > * {
+    -fx-opacity: 1.0;
+    -fx-background-color: #34d399;
+}
+
+.button:hover {
+    -fx-background-color: #93c5fd;
+}
+
+
+.button {
+    -fx-background-color: #7dd3fc;
+    -fx-font: normal bold 20px sans-serif;
+}
+
+.label {
+    -fx-font: normal bold 24px sans-serif;
+}
