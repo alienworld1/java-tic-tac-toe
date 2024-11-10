@@ -1,39 +1,153 @@
 package com.projects;
 
+import javafx.animation.PauseTransition;
+import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.Duration;
+
 
 public class GameUI {
     private final GameController gameController;
     private final Button[][] buttons;
     private Label statusLabel;
+    private Button modeToggleButton;
+    private Button difficultyButton;
+    private AIStrategy currentStrategy;
     private static final int BOARD_SIZE = 3;
-
+    
     public GameUI(GameController gameController) {
         this.gameController = gameController;
         this.buttons = new Button[BOARD_SIZE][BOARD_SIZE];
     }
-
+    
     public void initialize(Stage primaryStage) {
         VBox root = new VBox(10);
         root.setAlignment(Pos.CENTER);
-
+        
         statusLabel = new Label("Player X's turn");
         GridPane gridPane = createGameGrid();
+        
+        HBox controlButtons = new HBox(10);
+        controlButtons.setAlignment(Pos.CENTER);
+        
         Button resetButton = createResetButton();
+        modeToggleButton = createModeToggleButton();
+        difficultyButton = createDifficultyButton();
+        
+        controlButtons.getChildren().addAll(resetButton, modeToggleButton, difficultyButton);
+        
+        root.getChildren().addAll(statusLabel, gridPane, controlButtons);
 
-        root.getChildren().addAll(statusLabel, gridPane, resetButton);
-
-        Scene scene = new Scene(root, 300, 350);
+        Scene scene = new Scene(root, 300, 400);
         scene.getStylesheets().add(getClass().getResource("/styles/style.css").toExternalForm());
         primaryStage.setTitle("Tic Tac Toe");
         primaryStage.setScene(scene);
         primaryStage.show();
+
+        currentStrategy = new RandomAIStrategy();
+    }
+
+    private void handleButtonClick(int row, int col) {
+        if (gameController.makeMove(row, col)) {
+            updateButton(row, col);
+            updateGameStatus();
+            
+            // Handle AI move after player's move
+            if (gameController.isAITurn()) {
+                // Add slight delay for better UX
+                PauseTransition pause = new PauseTransition(Duration.seconds(0.5));
+                pause.setOnFinished(event -> {
+                    if (gameController.makeAIMove()) {
+                        // Update UI after AI move
+                        Platform.runLater(() -> {
+                            updateAllButtons();
+                            updateGameStatus();
+                        });
+                    }
+                });
+                pause.play();
+            }
+        }
+    }
+
+    private void updateAllButtons() {
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            for (int j = 0; j < BOARD_SIZE; j++) {
+                buttons[i][j].setText(gameController.getCellState(i, j).getSymbol());
+                buttons[i][j].setDisable(!gameController.getCellState(i, j).equals(Player.EMPTY));
+            }
+        }
+    }
+
+    private void toggleGameMode(Button button) {
+        if (button.getText().equals("vs Human")) {
+            button.setText("vs AI");
+            difficultyButton.setVisible(true);
+            gameController.setGameMode(GameMode.HUMAN_VS_AI, currentStrategy);
+        } else {
+            button.setText("vs Human");
+            difficultyButton.setVisible(false);
+            gameController.setGameMode(GameMode.HUMAN_VS_HUMAN, null);
+        }
+        resetGame();
+    }
+
+    private void toggleAIDifficulty(Button button) {
+        if (button.getText().equals("AI: Easy")) {
+            button.setText("AI: Hard");
+            currentStrategy = new MinimaxAIStrategy();
+        } else {
+            button.setText("AI: Easy");
+            currentStrategy = new RandomAIStrategy();
+        }
+        gameController.setGameMode(GameMode.HUMAN_VS_AI, currentStrategy);
+        resetGame();
+    }
+
+    private void updateGameStatus() {
+        switch (gameController.getGameState()) {
+            case WIN:
+                statusLabel.setText("Player " + gameController.getCurrentPlayer().getSymbol() + " wins!");
+                disableAllButtons();
+                break;
+            case DRAW:
+                statusLabel.setText("Game ended in a draw!");
+                break;
+            case PLAYING:
+                String currentPlayer = gameController.getCurrentPlayer().getSymbol();
+                if (gameController.isAITurn()) {
+                    statusLabel.setText("AI is thinking...");
+                } else {
+                    statusLabel.setText("Player " + currentPlayer + "'s turn");
+                }
+                break;
+        }
+    }
+
+    private void resetGame() {
+        gameController.resetGame();
+        resetButtons();
+        updateGameStatus();
+    }
+    
+    private Button createModeToggleButton() {
+        Button button = new Button("vs Human");
+        button.setOnAction(e -> toggleGameMode(button));
+        return button;
+    }
+
+    private Button createDifficultyButton() {
+        Button button = new Button("AI: Easy");
+        button.setOnAction(e -> toggleAIDifficulty(button));
+        button.setVisible(false);
+        return button;
     }
 
     private GridPane createGameGrid() {
@@ -66,37 +180,9 @@ public class GameUI {
         return resetButton;
     }
 
-    private void handleButtonClick(int row, int col) {
-        if (gameController.makeMove(row, col)) {
-            updateButton(row, col);
-            updateGameStatus();
-        }
-    }
-
     private void updateButton(int row, int col) {
         buttons[row][col].setText(gameController.getCellState(row, col).getSymbol());
         buttons[row][col].setDisable(true);
-    }
-
-    private void updateGameStatus() {
-        switch (gameController.getGameState()) {
-            case WIN:
-                statusLabel.setText("Player " + gameController.getCurrentPlayer().getSymbol() + " wins!");
-                disableAllButtons();
-                break;
-            case DRAW:
-                statusLabel.setText("Game ended in a draw!");
-                break;
-            case PLAYING:
-                statusLabel.setText("Player " + gameController.getCurrentPlayer().getSymbol() + "'s turn");
-                break;
-        }
-    }
-
-    private void resetGame() {
-        gameController.resetGame();
-        resetButtons();
-        statusLabel.setText("Player X's turn");
     }
 
     private void resetButtons() {
