@@ -119,23 +119,6 @@ public class GameUI {
         }
     }
 
-    private void animateWinningButtons() {
-        for (int i = 0; i < BOARD_SIZE; i++) {
-            for (int j = 0; j < BOARD_SIZE; j++) {
-                if (isWinningCell(i, j)) {
-                    buttons[i][j].getStyleClass().add("win-button");
-                }
-            }
-        }
-    }
-
-    private boolean isWinningCell(int row, int col) {
-        Player player = gameController.getCurrentPlayer();
-        return (checkRowWin(row, player) || 
-                checkColumnWin(col, player) || 
-                checkDiagonalWin(player));
-    }
-
     private boolean checkRowWin(int row, Player player) {
         return gameController.getCellState(row, 0) == player &&
                gameController.getCellState(row, 1) == player &&
@@ -148,13 +131,67 @@ public class GameUI {
                gameController.getCellState(2, col) == player;
     }
 
-    private boolean checkDiagonalWin(Player player) {
-        return (gameController.getCellState(0, 0) == player &&
-                gameController.getCellState(1, 1) == player &&
-                gameController.getCellState(2, 2) == player) ||
-               (gameController.getCellState(0, 2) == player &&
-                gameController.getCellState(1, 1) == player &&
-                gameController.getCellState(2, 0) == player);
+
+    private void animateWinningButtons() {
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            for (int j = 0; j < BOARD_SIZE; j++) {
+                if (isWinningCell(i, j)) {
+                    buttons[i][j].getStyleClass().add("win-button");
+                }
+            }
+        }
+    }
+    
+    private boolean isDiagonalWin(Player player) {
+        boolean mainDiagonalWin = 
+            gameController.getCellState(0, 0) == player &&
+            gameController.getCellState(1, 1) == player &&
+            gameController.getCellState(2, 2) == player;
+        
+        boolean antiDiagonalWin = 
+            gameController.getCellState(0, 2) == player &&
+            gameController.getCellState(1, 1) == player &&
+            gameController.getCellState(2, 0) == player;
+        
+        return mainDiagonalWin || antiDiagonalWin;
+    }
+    
+    private boolean isWinningCell(int row, int col) {
+        Player player = gameController.getCurrentPlayer();
+        
+        // Main diagonal
+        if (isMainDiagonalWin(player)) {
+            return (row == col);
+        }
+        
+        // Anti-diagonal
+        if (isAntiDiagonalWin(player)) {
+            return (row + col == 2);
+        }
+        
+        // Check row win
+        if (checkRowWin(row, player)) {
+            return true;
+        }
+        
+        // Check column win
+        if (checkColumnWin(col, player)) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    private boolean isMainDiagonalWin(Player player) {
+        return gameController.getCellState(0, 0) == player &&
+               gameController.getCellState(1, 1) == player &&
+               gameController.getCellState(2, 2) == player;
+    }
+    
+    private boolean isAntiDiagonalWin(Player player) {
+        return gameController.getCellState(0, 2) == player &&
+               gameController.getCellState(1, 1) == player &&
+               gameController.getCellState(2, 0) == player;
     }
 
     private void resetGame() {
